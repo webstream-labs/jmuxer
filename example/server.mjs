@@ -47,7 +47,7 @@ import expressWs from "express-ws";
 import path from "path";
 import fs from "fs/promises";
 import { encode } from "msgpack-lite";
-import JMuxer from "./jmuxer.min.js";
+import * as JMuxer from "./jmuxer.min.js";
 
 const app = express();
 expressWs(app);
