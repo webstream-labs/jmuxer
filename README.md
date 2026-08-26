@@ -1,5 +1,5 @@
 [![pages-build-deployment](https://github.com/samirkumardas/jmuxer/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/samirkumardas/jmuxer/actions/workflows/pages/pages-build-deployment)
-![Maintenance](https://img.shields.io/maintenance/yes/2025.svg)
+![Maintenance](https://img.shields.io/maintenance/yes/2026.svg)
 ![license](https://img.shields.io/github/license/mashape/apistatus.svg)
 
 jMuxer
@@ -215,9 +215,6 @@ A distribution version is available inside *dist* directory. However, if you nee
  3. npm install
  4. npm run build OR npm run pro
 
-Support
------------
-If the project helps you, [buy me a cup of coffee!](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&currency_code=USD&business=samir@ascendtechnologies.net&item_name=donation%20for%20jMuxer)
 
 Credits
 -----------
