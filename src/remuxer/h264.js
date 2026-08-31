@@ -226,7 +226,17 @@ export class H264Remuxer extends BaseRemuxer {
     }
 
     parsePPS(pps) {
-        this.mp4track.pps = [new Uint8Array(pps)];
+        if (!Array.isArray(this.mp4track.pps)) {
+            this.mp4track.pps = [];
+        }
+        // A stream may define more than one PPS (e.g. the encoder uses different
+        // entropy-coding modes for I- vs P-slices, thus referencing different
+        // pps_ids). Keep every distinct PPS so any slice can find the one it
+        // references.
+        for (const existing of this.mp4track.pps) {
+            if (sameBytes(existing, pps)) return;
+        }
+        this.mp4track.pps.push(new Uint8Array(pps));
     }
 
     parseNAL(unit) {
@@ -239,9 +249,7 @@ export class H264Remuxer extends BaseRemuxer {
         let push = false;
         switch (unit.type()) {
             case NALU264.PPS:
-                if (!this.mp4track.pps) {
-                    this.parsePPS(unit.getPayload());
-                }
+                this.parsePPS(unit.getPayload());
                 push = true;
                 break;
             case NALU264.SPS:
@@ -265,4 +273,12 @@ export class H264Remuxer extends BaseRemuxer {
         
         return push;
     }
+}
+
+function sameBytes(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
 }
