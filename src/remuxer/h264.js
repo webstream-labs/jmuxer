@@ -16,8 +16,8 @@ export class H264Remuxer extends BaseRemuxer {
             type: 'video',
             len: 0,
             fragmented: true,
-            sps: '',
-            pps: '',
+            sps: [],
+            pps: [],
             fps: 30,
             width: 0,
             height: 0,
@@ -33,8 +33,8 @@ export class H264Remuxer extends BaseRemuxer {
 
     resetTrack() {
         this.readyToDecode = false;
-        this.mp4track.sps = '';
-        this.mp4track.pps = '';
+        this.mp4track.sps = [];
+        this.mp4track.pps = [];
         this.nextDts = 0;
         this.dts = 0;
         this.remainingData = new Uint8Array();
@@ -226,9 +226,6 @@ export class H264Remuxer extends BaseRemuxer {
     }
 
     parsePPS(pps) {
-        if (!Array.isArray(this.mp4track.pps)) {
-            this.mp4track.pps = [];
-        }
         // A stream may define more than one PPS (e.g. the encoder uses different
         // entropy-coding modes for I- vs P-slices, thus referencing different
         // pps_ids). Keep every distinct PPS so any slice can find the one it
