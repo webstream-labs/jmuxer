@@ -1,7 +1,7 @@
 import * as debug from '../util/debug';
 import { H264Parser, NALU264 } from '../parsers/h264.js';
 import { BaseRemuxer } from './base.js';
-import { appendByteArray } from '../util/utils.js';
+import { appendByteArray, sameBytes } from '../util/utils.js';
 
 export class H264Remuxer extends BaseRemuxer {
 
@@ -273,12 +273,4 @@ export class H264Remuxer extends BaseRemuxer {
         
         return push;
     }
-}
-
-function sameBytes(a, b) {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-        if (a[i] !== b[i]) return false;
-    }
-    return true;
 }
