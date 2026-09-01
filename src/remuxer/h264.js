@@ -250,7 +250,7 @@ export class H264Remuxer extends BaseRemuxer {
                 push = true;
                 break;
             case NALU264.SPS:
-                if (!this.mp4track.sps) {
+                if (!this.mp4track.sps.length) {
                     this.parseSPS(unit.getPayload());
                 }
                 push = true;
@@ -264,7 +264,7 @@ export class H264Remuxer extends BaseRemuxer {
             default:
         }
 
-        if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
+        if (!this.readyToDecode && this.mp4track.pps.length && this.mp4track.sps.length) {
             this.readyToDecode = true;
         }
         
