@@ -45,6 +45,5 @@
     "msgpack-lite": "^0.1.26",
     "nodemon": "^3.1.10",
     "rollup": "^4.59.0"
-  },
-  "type": "module"
+  }
 }
