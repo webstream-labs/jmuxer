@@ -16,9 +16,9 @@ export class H265Remuxer extends BaseRemuxer {
             type: 'video',
             len: 0,
             fragmented: true,
-            vps: '',
-            sps: '',
-            pps: '',
+            vps: [],
+            sps: [],
+            pps: [],
             hvcC: {},
             fps: 30,
             width: 0,
@@ -35,9 +35,9 @@ export class H265Remuxer extends BaseRemuxer {
 
     resetTrack() {
         this.readyToDecode = false;
-        this.mp4track.vps = '';
-        this.mp4track.sps = '';
-        this.mp4track.pps = '';
+        this.mp4track.vps = [];
+        this.mp4track.sps = [];
+        this.mp4track.pps = [];
         this.mp4track.hvcC = {};
         this.nextDts = 0;
         this.dts = 0;
@@ -286,7 +286,7 @@ export class H265Remuxer extends BaseRemuxer {
             default:
         }
 
-        if (!this.readyToDecode && this.mp4track.vps && this.mp4track.sps && this.mp4track.pps) {
+        if (!this.readyToDecode && this.mp4track.vps.length && this.mp4track.sps.length && this.mp4track.pps.length) {
             this.readyToDecode = true;
         }
 
