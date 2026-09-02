@@ -42,3 +42,11 @@ export function removeTrailingDotZero(input) {
     // Use regex to strip all trailing ".0" sequences
     return input.replace(/(?:\.0)+$/, '');
 }
+
+export function sameBytes(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}

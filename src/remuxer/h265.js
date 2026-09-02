@@ -1,7 +1,7 @@
 import * as debug from '../util/debug';
 import { H265Parser, NALU265 } from '../parsers/h265.js';
 import { BaseRemuxer } from './base.js';
-import { appendByteArray, reverseBits, removeTrailingDotZero } from '../util/utils.js';
+import { appendByteArray, reverseBits, removeTrailingDotZero, sameBytes } from '../util/utils.js';
 
 export class H265Remuxer extends BaseRemuxer {
 
@@ -16,9 +16,9 @@ export class H265Remuxer extends BaseRemuxer {
             type: 'video',
             len: 0,
             fragmented: true,
-            vps: '',
-            sps: '',
-            pps: '',
+            vps: [],
+            sps: [],
+            pps: [],
             hvcC: {},
             fps: 30,
             width: 0,
@@ -35,9 +35,9 @@ export class H265Remuxer extends BaseRemuxer {
 
     resetTrack() {
         this.readyToDecode = false;
-        this.mp4track.vps = '';
-        this.mp4track.sps = '';
-        this.mp4track.pps = '';
+        this.mp4track.vps = [];
+        this.mp4track.sps = [];
+        this.mp4track.pps = [];
         this.mp4track.hvcC = {};
         this.nextDts = 0;
         this.dts = 0;
@@ -240,11 +240,18 @@ export class H265Remuxer extends BaseRemuxer {
     }
 
     parsePPS(pps) {
-        this.mp4track.pps = [pps];
+        // A stream may define more than one PPS (e.g. the encoder uses different
+        // entropy-coding modes for I- vs P-slices, thus referencing different
+        // pps_ids). Keep every distinct PPS so any slice can find the one it
+        // references.
+        for (const existing of this.mp4track.pps) {
+            if (sameBytes(existing, pps)) return;
+        }
+        this.mp4track.pps.push(new Uint8Array(pps));
     }
 
     parseVPS(vps) {
-        this.mp4track.vps = [vps];
+        this.mp4track.vps = [new Uint8Array(vps)];
     }
 
     parseNAL(unit) {
@@ -257,23 +264,21 @@ export class H265Remuxer extends BaseRemuxer {
         let push = false;
         switch (unit.type()) {
             case NALU265.VPS:
-                if (!this.mp4track.vps) {
+                if (!this.mp4track.vps.length) {
                     this.parseVPS(unit.getPayload());
                 }
                 push = true;
                 break;
 
             case NALU265.SPS:
-                if (!this.mp4track.sps) {
+                if (!this.mp4track.sps.length) {
                     this.parseSPS(unit.getPayload());
                 }
                 push = true;
                 break;
 
             case NALU265.PPS:
-                if (!this.mp4track.pps) {
-                    this.parsePPS(unit.getPayload());
-                }
+                this.parsePPS(unit.getPayload());
                 push = true;
                 break;
             case NALU265.AUD:
@@ -286,7 +291,7 @@ export class H265Remuxer extends BaseRemuxer {
             default:
         }
 
-        if (!this.readyToDecode && this.mp4track.vps && this.mp4track.sps && this.mp4track.pps) {
+        if (!this.readyToDecode && this.mp4track.vps.length && this.mp4track.sps.length && this.mp4track.pps.length) {
             this.readyToDecode = true;
         }
 
