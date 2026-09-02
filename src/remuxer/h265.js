@@ -1,7 +1,7 @@
 import * as debug from '../util/debug';
 import { H265Parser, NALU265 } from '../parsers/h265.js';
 import { BaseRemuxer } from './base.js';
-import { appendByteArray, reverseBits, removeTrailingDotZero } from '../util/utils.js';
+import { appendByteArray, reverseBits, removeTrailingDotZero, sameBytes } from '../util/utils.js';
 
 export class H265Remuxer extends BaseRemuxer {
 
@@ -240,7 +240,14 @@ export class H265Remuxer extends BaseRemuxer {
     }
 
     parsePPS(pps) {
-        this.mp4track.pps = [pps];
+        // A stream may define more than one PPS (e.g. the encoder uses different
+        // entropy-coding modes for I- vs P-slices, thus referencing different
+        // pps_ids). Keep every distinct PPS so any slice can find the one it
+        // references.
+        for (const existing of this.mp4track.pps) {
+            if (sameBytes(existing, pps)) return;
+        }
+        this.mp4track.pps.push(new Uint8Array(pps));
     }
 
     parseVPS(vps) {
