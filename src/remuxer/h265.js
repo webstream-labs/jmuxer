@@ -251,7 +251,7 @@ export class H265Remuxer extends BaseRemuxer {
     }
 
     parseVPS(vps) {
-        this.mp4track.vps = [vps];
+        this.mp4track.vps = [new Uint8Array(vps)];
     }
 
     parseNAL(unit) {
@@ -264,23 +264,21 @@ export class H265Remuxer extends BaseRemuxer {
         let push = false;
         switch (unit.type()) {
             case NALU265.VPS:
-                if (!this.mp4track.vps) {
+                if (!this.mp4track.vps.length) {
                     this.parseVPS(unit.getPayload());
                 }
                 push = true;
                 break;
 
             case NALU265.SPS:
-                if (!this.mp4track.sps) {
+                if (!this.mp4track.sps.length) {
                     this.parseSPS(unit.getPayload());
                 }
                 push = true;
                 break;
 
             case NALU265.PPS:
-                if (!this.mp4track.pps) {
-                    this.parsePPS(unit.getPayload());
-                }
+                this.parsePPS(unit.getPayload());
                 push = true;
                 break;
             case NALU265.AUD:
