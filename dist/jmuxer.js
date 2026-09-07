@@ -723,13 +723,15 @@
         0x03,
         // numOfArrays
 
+        // A stream may carry more than one PPS, so each array declares its real
+        // count: an under-reported numNalus leaves the extra sets unreadable.
         0x20,
         // array_completeness + NAL_unit_type (32 = VPS)
-        0x00, 0x01], _toConsumableArray(vps), [0x21,
+        track.vps.length >>> 8 & 0xFF, track.vps.length & 0xFF], _toConsumableArray(vps), [0x21,
         // NAL_unit_type (33 = SPS)
-        0x00, 0x01], _toConsumableArray(sps), [0x22,
+        track.sps.length >>> 8 & 0xFF, track.sps.length & 0xFF], _toConsumableArray(sps), [0x22,
         // NAL_unit_type (34 = PPS)
-        0x00, 0x01], _toConsumableArray(pps))));
+        track.pps.length >>> 8 & 0xFF, track.pps.length & 0xFF], _toConsumableArray(pps))));
         var width = track.width;
         var height = track.height;
         return MP4.box(MP4.types.hev1, new Uint8Array([0x00, 0x00, 0x00,
@@ -1823,6 +1825,13 @@
     // Use regex to strip all trailing ".0" sequences
     return input.replace(/(?:\.0)+$/, '');
   }
+  function sameBytes(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
 
   var H264Remuxer = /*#__PURE__*/function (_BaseRemuxer) {
     function H264Remuxer(timescale, duration, frameDuration) {
@@ -1838,8 +1847,8 @@
         type: 'video',
         len: 0,
         fragmented: true,
-        sps: '',
-        pps: '',
+        sps: [],
+        pps: [],
         fps: 30,
         width: 0,
         height: 0,
@@ -1858,8 +1867,8 @@
       key: "resetTrack",
       value: function resetTrack() {
         this.readyToDecode = false;
-        this.mp4track.sps = '';
-        this.mp4track.pps = '';
+        this.mp4track.sps = [];
+        this.mp4track.pps = [];
         this.nextDts = 0;
         this.dts = 0;
         this.remainingData = new Uint8Array();
@@ -2079,7 +2088,23 @@
     }, {
       key: "parsePPS",
       value: function parsePPS(pps) {
-        this.mp4track.pps = [new Uint8Array(pps)];
+        // A stream may define more than one PPS (e.g. the encoder uses different
+        // entropy-coding modes for I- vs P-slices, thus referencing different
+        // pps_ids). Keep every distinct PPS so any slice can find the one it
+        // references.
+        var _iterator4 = _createForOfIteratorHelper(this.mp4track.pps),
+          _step4;
+        try {
+          for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+            var existing = _step4.value;
+            if (sameBytes(existing, pps)) return;
+          }
+        } catch (err) {
+          _iterator4.e(err);
+        } finally {
+          _iterator4.f();
+        }
+        this.mp4track.pps.push(new Uint8Array(pps));
       }
     }, {
       key: "parseNAL",
@@ -2091,13 +2116,11 @@
         var push = false;
         switch (unit.type()) {
           case NALU264.PPS:
-            if (!this.mp4track.pps) {
-              this.parsePPS(unit.getPayload());
-            }
+            this.parsePPS(unit.getPayload());
             push = true;
             break;
           case NALU264.SPS:
-            if (!this.mp4track.sps) {
+            if (!this.mp4track.sps.length) {
               this.parseSPS(unit.getPayload());
             }
             push = true;
@@ -2109,7 +2132,7 @@
             log('SEI - ignoing');
             break;
         }
-        if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
+        if (!this.readyToDecode && this.mp4track.pps.length && this.mp4track.sps.length) {
           this.readyToDecode = true;
         }
         return push;
@@ -2637,9 +2660,9 @@
         type: 'video',
         len: 0,
         fragmented: true,
-        vps: '',
-        sps: '',
-        pps: '',
+        vps: [],
+        sps: [],
+        pps: [],
         hvcC: {},
         fps: 30,
         width: 0,
@@ -2659,9 +2682,9 @@
       key: "resetTrack",
       value: function resetTrack() {
         this.readyToDecode = false;
-        this.mp4track.vps = '';
-        this.mp4track.sps = '';
-        this.mp4track.pps = '';
+        this.mp4track.vps = [];
+        this.mp4track.sps = [];
+        this.mp4track.pps = [];
         this.mp4track.hvcC = {};
         this.nextDts = 0;
         this.dts = 0;
@@ -2884,12 +2907,28 @@
     }, {
       key: "parsePPS",
       value: function parsePPS(pps) {
-        this.mp4track.pps = [pps];
+        // A stream may define more than one PPS (e.g. the encoder uses different
+        // entropy-coding modes for I- vs P-slices, thus referencing different
+        // pps_ids). Keep every distinct PPS so any slice can find the one it
+        // references.
+        var _iterator4 = _createForOfIteratorHelper(this.mp4track.pps),
+          _step4;
+        try {
+          for (_iterator4.s(); !(_step4 = _iterator4.n()).done;) {
+            var existing = _step4.value;
+            if (sameBytes(existing, pps)) return;
+          }
+        } catch (err) {
+          _iterator4.e(err);
+        } finally {
+          _iterator4.f();
+        }
+        this.mp4track.pps.push(new Uint8Array(pps));
       }
     }, {
       key: "parseVPS",
       value: function parseVPS(vps) {
-        this.mp4track.vps = [vps];
+        this.mp4track.vps = [new Uint8Array(vps)];
       }
     }, {
       key: "parseNAL",
@@ -2901,21 +2940,19 @@
         var push = false;
         switch (unit.type()) {
           case NALU265.VPS:
-            if (!this.mp4track.vps) {
+            if (!this.mp4track.vps.length) {
               this.parseVPS(unit.getPayload());
             }
             push = true;
             break;
           case NALU265.SPS:
-            if (!this.mp4track.sps) {
+            if (!this.mp4track.sps.length) {
               this.parseSPS(unit.getPayload());
             }
             push = true;
             break;
           case NALU265.PPS:
-            if (!this.mp4track.pps) {
-              this.parsePPS(unit.getPayload());
-            }
+            this.parsePPS(unit.getPayload());
             push = true;
             break;
           case NALU265.AUD:
@@ -2926,7 +2963,7 @@
             log('SEI - ignoing');
             break;
         }
-        if (!this.readyToDecode && this.mp4track.vps && this.mp4track.sps && this.mp4track.pps) {
+        if (!this.readyToDecode && this.mp4track.vps.length && this.mp4track.sps.length && this.mp4track.pps.length) {
           this.readyToDecode = true;
         }
         return push;
