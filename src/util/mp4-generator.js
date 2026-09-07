@@ -437,16 +437,18 @@ export class MP4 {
             0x03,       // constantFrameRate = 0, numTemporalLayers = 0, lengthSizeMinusOne = 3 (AKA 4)
             0x03,       // numOfArrays
 
+            // A stream may carry more than one PPS, so each array declares its real
+            // count: an under-reported numNalus leaves the extra sets unreadable.
             0x20,       // array_completeness + NAL_unit_type (32 = VPS)
-            0x00, 0x01, // numNalus
+            (track.vps.length >>> 8) & 0xFF, track.vps.length & 0xFF, // numNalus
             ...vps,
 
             0x21,       // NAL_unit_type (33 = SPS)
-            0x00, 0x01,
+            (track.sps.length >>> 8) & 0xFF, track.sps.length & 0xFF,
             ...sps,
 
             0x22,       // NAL_unit_type (34 = PPS)
-            0x00, 0x01,
+            (track.pps.length >>> 8) & 0xFF, track.pps.length & 0xFF,
             ...pps
         ]));
 

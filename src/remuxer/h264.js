@@ -1,7 +1,7 @@
 import * as debug from '../util/debug';
 import { H264Parser, NALU264 } from '../parsers/h264.js';
 import { BaseRemuxer } from './base.js';
-import { appendByteArray } from '../util/utils.js';
+import { appendByteArray, sameBytes } from '../util/utils.js';
 
 export class H264Remuxer extends BaseRemuxer {
 
@@ -16,8 +16,8 @@ export class H264Remuxer extends BaseRemuxer {
             type: 'video',
             len: 0,
             fragmented: true,
-            sps: '',
-            pps: '',
+            sps: [],
+            pps: [],
             fps: 30,
             width: 0,
             height: 0,
@@ -33,8 +33,8 @@ export class H264Remuxer extends BaseRemuxer {
 
     resetTrack() {
         this.readyToDecode = false;
-        this.mp4track.sps = '';
-        this.mp4track.pps = '';
+        this.mp4track.sps = [];
+        this.mp4track.pps = [];
         this.nextDts = 0;
         this.dts = 0;
         this.remainingData = new Uint8Array();
@@ -226,7 +226,14 @@ export class H264Remuxer extends BaseRemuxer {
     }
 
     parsePPS(pps) {
-        this.mp4track.pps = [new Uint8Array(pps)];
+        // A stream may define more than one PPS (e.g. the encoder uses different
+        // entropy-coding modes for I- vs P-slices, thus referencing different
+        // pps_ids). Keep every distinct PPS so any slice can find the one it
+        // references.
+        for (const existing of this.mp4track.pps) {
+            if (sameBytes(existing, pps)) return;
+        }
+        this.mp4track.pps.push(new Uint8Array(pps));
     }
 
     parseNAL(unit) {
@@ -239,13 +246,11 @@ export class H264Remuxer extends BaseRemuxer {
         let push = false;
         switch (unit.type()) {
             case NALU264.PPS:
-                if (!this.mp4track.pps) {
-                    this.parsePPS(unit.getPayload());
-                }
+                this.parsePPS(unit.getPayload());
                 push = true;
                 break;
             case NALU264.SPS:
-                if (!this.mp4track.sps) {
+                if (!this.mp4track.sps.length) {
                     this.parseSPS(unit.getPayload());
                 }
                 push = true;
@@ -259,7 +264,7 @@ export class H264Remuxer extends BaseRemuxer {
             default:
         }
 
-        if (!this.readyToDecode && this.mp4track.pps && this.mp4track.sps) {
+        if (!this.readyToDecode && this.mp4track.pps.length && this.mp4track.sps.length) {
             this.readyToDecode = true;
         }
         
